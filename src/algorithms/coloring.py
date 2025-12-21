@@ -18,13 +18,12 @@ def greedy_coloring(
       - en otro caso se usa el orden ascendente de identificadores
     randomize: si es True y order es None, usa orden aleatorio
 
-  Devuelve:
-    (colors, color_classes)
+  Returns:
     - colors: dict {vertice: color} donde los colores son enteros 1..k
     - color_classes: lista de sets, indexada desde 0, donde cada set contiene
-    los vértices coloreados con ese color (color i corresponde a index i-1)
+      los vértices coloreados con ese color (color i corresponde a index i-1)
   """
-  vertices = list(graph.vertices)
+  vertices = list[int](graph.vertices)
   if order is None:
     if randomize:
       random.shuffle(vertices)
@@ -37,7 +36,7 @@ def greedy_coloring(
 
   for v in order:
     # colores usados por vecinos ya coloreados
-    used: Set[int] = set()
+    used: Set[int] = set[int]()
     for u in graph.get_neighbors(v):
       if u in colors:
         used.add(colors[u])
