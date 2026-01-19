@@ -1,7 +1,11 @@
+from .coloring import dsatur_coloring, rlf_coloring
+from .reduction import timetabling_to_graph
 from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
 
 from ..data_structures.timetabling import TimetablingInstance
+from ..data_structures.timetabling import Assignment
+import time
 
 
 @dataclass
@@ -168,5 +172,159 @@ def _can_place(
     existing = scheduled_by_period.get(period, set())
     if conflicts.intersection(existing):
       return False
-
   return True
+
+
+# Funciones para el modelo dataclasses TimetablingInstance
+
+
+def solve_timetabling_with_graph_coloring(instance: TimetablingInstance, heuristic: str = 'dsatur') -> None:
+  """
+  Resuelve el problema de Timetabling transformándolo a Graph Coloring,
+  aplicando una heurística y reconstruyendo la asignación.
+  Modifica la instancia in-place.
+  """
+  # Transformar Timetabling a Graph
+  graph = timetabling_to_graph(instance)
+
+  # Aplicar heurística de coloración
+  if heuristic == 'dsatur':
+    coloring = dsatur_coloring(graph)
+  elif heuristic == 'rlf':
+    coloring = rlf_coloring(graph)
+  else:
+    raise ValueError(f"Heurística desconocida: {heuristic}")
+
+  # Extraer asignaciones de períodos para secciones
+  section_periods = {}
+  for vertex, color in coloring.items():
+    if graph.node_types.get(vertex) == 'Section':
+      section_id = vertex - 40000  # assuming offset
+      period = color  # El color representa el período
+      section_periods[section_id] = period
+
+  # Asignar aulas y profesores basándose en las restricciones
+  used_capacity = {p: {rid: 0 for rid in instance.rooms} for p in instance.periods}
+  used_teachers = {p: set() for p in instance.periods}
+
+  for section_id, section in instance.course_sections.items():
+    course_name = section.course_name
+    period = section_periods.get(section_id, 1)  # Usar período asignado, default 1
+
+    # Encontrar aula disponible con capacidad suficiente y no usada en este período
+    available_rooms = [
+        rid for rid, room in instance.rooms.items()
+        if period in room.availability and used_capacity[period][rid] + section.total_students <= room.capacity
+    ]
+    if not available_rooms:
+      print(f"No hay aula disponible para {section.get_name()} en período {period}")
+      continue
+    room_id = available_rooms[0]  # Elegir la primera disponible
+    used_capacity[period][room_id] += section.total_students
+
+    # Encontrar profesor disponible que pueda impartir el curso y no usado en este período
+    available_teachers = [
+        tid for tid, teacher in instance.teachers.items()
+        if course_name in teacher.course_names and period in teacher.availability and tid not in used_teachers[period]
+    ]
+    if not available_teachers:
+      print(f"No hay profesor disponible para {section.get_name()} en período {period}")
+      continue
+    teacher_id = available_teachers[0]  # Elegir el primero disponible
+    used_teachers[period].add(teacher_id)
+
+    # Asignar la sección
+    instance.assign_section(section_id, period, room_id, teacher_id)
+
+
+def solve_timetabling_bruteforce(instance: TimetablingInstance, time_limit_sec: float = 5.0) -> Tuple[bool, Dict[int, Assignment], float]:
+  """
+  Fuerza bruta con transformación a vértices factibles y chequeo de conflictos (modelo de grafo).
+  Selecciona exactamente una asignación por sección y verifica independencia (sin conflictos).
+  Devuelve (es_factible, asignaciones, tiempo_segundos). Detiene cuando encuentra la primera solución.
+  """
+  start = time.time()
+
+  # Construir candidatos por sección (vértices)
+  section_candidates: Dict[int, List[Tuple[int, int, int]]] = {}
+  for sid, section in instance.course_sections.items():
+    candidates = []
+    # profesores calificados
+    qualified = [tid for tid, t in instance.teachers.items() if section.course_name in t.course_names]
+    if not qualified:
+      qualified = list(instance.teachers.keys())
+    periods = list(instance.periods)
+    rooms = list(instance.rooms.keys())
+    for period in periods:
+      for room_id in rooms:
+        room = instance.rooms[room_id]
+        if room.capacity < section.total_students:
+          continue
+        if period not in room.availability:
+          continue
+        for tid in qualified:
+          teacher = instance.teachers[tid]
+          if period not in teacher.availability:
+            continue
+          candidates.append((period, room_id, tid))
+    section_candidates[sid] = candidates
+
+  # Ordenar secciones por menor número de candidatos (fail-first)
+  ordered_sections = sorted(instance.course_sections.keys(), key=lambda s: len(section_candidates[s]))
+
+  used_room_period: Set[Tuple[int, int]] = set()
+  used_teacher_period: Set[Tuple[int, int]] = set()
+  used_curr_period: Set[Tuple[int, int]] = set()
+  result_assignments: Dict[int, Assignment] = {}
+
+  def conflicts(section_id: int, period: int, room_id: int, teacher_id: int) -> bool:
+    # room-period y teacher-period únicos
+    if (room_id, period) in used_room_period:
+      return True
+    if (teacher_id, period) in used_teacher_period:
+      return True
+    # conflictos por curriculum
+    section = instance.course_sections[section_id]
+    for curr_id in section.curriculum_ids:
+      if (curr_id, period) in used_curr_period:
+        return True
+    return False
+
+  def place(section_id: int, period: int, room_id: int, teacher_id: int) -> None:
+    used_room_period.add((room_id, period))
+    used_teacher_period.add((teacher_id, period))
+    sec = instance.course_sections[section_id]
+    for curr_id in sec.curriculum_ids:
+      used_curr_period.add((curr_id, period))
+    result_assignments[section_id] = Assignment(section_id=section_id, period=period, room_id=room_id, teacher_id=teacher_id)
+
+  def unplace(section_id: int, period: int, room_id: int, teacher_id: int) -> None:
+    used_room_period.discard((room_id, period))
+    used_teacher_period.discard((teacher_id, period))
+    sec = instance.course_sections[section_id]
+    for curr_id in sec.curriculum_ids:
+      used_curr_period.discard((curr_id, period))
+    result_assignments.pop(section_id, None)
+
+  found = False
+
+  def dfs(idx: int) -> bool:
+    nonlocal found
+    if time.time() - start > time_limit_sec:
+      return False
+    if idx == len(ordered_sections):
+      found = True
+      return True
+    sid = ordered_sections[idx]
+    for (period, room_id, teacher_id) in section_candidates[sid]:
+      if conflicts(sid, period, room_id, teacher_id):
+        continue
+      place(sid, period, room_id, teacher_id)
+      if dfs(idx + 1):
+        return True
+      unplace(sid, period, room_id, teacher_id)
+    return False
+
+  dfs(0)
+  elapsed = time.time() - start
+  return found, (result_assignments if found else {}), elapsed

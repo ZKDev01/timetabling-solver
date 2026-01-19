@@ -1,118 +1,133 @@
-# Timetabling Problem
+# Descripción de Timetabling Problem
+El problema estandarizado de planificación de horarios implica asignar recursos limitados (como aulas y profesores) a un conjunto de actividades (clase o exámenes) dentro de un marco temporal específico. El objetivo es crear un horario que minimice conflictos (como solapamientos entre clases) y maximice la utilización eficiente del espacio y del tiempo. Este problema presenta múltiples restricciones, como la disponibilidad de los profesores y las preferencias de los estudiantes. Dichas restricciones dependen exclusivamente del alcance de la institución. 
 
-**Timetabling**: Problema de asignación, sujeta a restricciones, de recursos dados a objetos que se colocan en el espacio-tiempo, de manera que se satisfaga lo más cerca posible un conjunto de objetivos deseables. Un horario muestra cuándo se llevarán a cabo eventos particulares. No necesariamente implica una asignación de recursos explícita en su definición básica, aunque a menudo se realiza como parte de un proceso que considera la asignación de recursos
+El problema específico de planificación de horarios es **Planificación de Horarios de Cursos Universitarios** (**University Course Timetabling Problem**) y este tiene dos posibles clasificaciones: Curriculum-based UCTP (CB-UCTP) y Post-Enrolment UCTP (PE-UCTP)
+- **CB-UCTP**: El horario se construye para grupos abstractos de estudiantes que siguen un plan de estudios fijo (curriculum) Un curriculum se define como un grupo de cursos que comparten estudiantes comunes. El objetivo es garantizar que no se impartan cursos dentro del mismo curriculum a la misma hora. 
+- **PE-UCTP**: El horario se construye después de que los estudiantes se hayan inscrito en cursos individuales, utilizando las listas reales de matriculados para evitar conflictos. 
+# Análisis Preliminar de CB-UCTP
+El CB-UCTP es un subtipo específico del University Course Timetabling Problem, que se enfoque en construir horarios de cursos universitarios antes de que los estudiantes realicen su matrícula individual. Se basa en la estructura fija de los planes de estudio (curriculum), que definen grupos de cursos que suelen ser cursados por un mismo conjunto de estudiantes.
 
-**Problema de Decisión vs. Problema de Optimización**:
-- *Problema de Decisión*: Este problema se puede convertir en: Dado un conjunto de eventos, tiempos, aulas y restricciones, ¿existe un horario que cumpla con todas las restricciones del problema? Este es un problema de satisfacibilidad y si la respuesta es negativa entonces se sabe que es imposible crear un horario válido y se deben relajar algunas restricciones. 
-- *Problema de Optimización*: Dado un conjunto de eventos, tiempos, aulas y restricciones, encuentre un horario que, siendo válido, minimice o maximice una función objetivo que este regida a la asignación de las variables de decisión. 
+**Diferencia CB-UCTP y PE-UCTP**: En lugar de usar listas de inscripción, como en PE-UCTP, el CB-UCTP usa "curriculum" como conjuntos de cursos que comparten estudiantes hipotéticos. Ejemplo: Curriculum "Ciencias de la Computación (Semestre 1)" incluye: "Lógica", "Análisis Matemático", "Álgebra", "Programación". Estos cursos no deben programarse a la misma hora, porque un mismo grupo de estudiantes debería poder asistir a todos
 
-## Academic Timetabling
+**Elementos Principales del Problema**: Cursos, Curriculum, Períodos, Recursos (Aulas y Profesores)
+- **Cursos**: Unidades principales que requieren planificación horaria. 
+- **Curriculum**: Agrupaciones lógicas de cursos que representan grupos de estudiantes. Cada curriculum contiene un conjunto de cursos relacionados y la cantidad de estudiantes que posee
+- **Períodos**: Unidades discretas de tiempo para programación
+- **Aulas**: Espacios físicos disponibles para impartir clases y cada aula tiene una capacidad máxima de estudiantes. 
+- **Profesores**: Personal docente responsable de impartir los cursos y cada profesor está calificado para impartir un conjunto de cursos
 
-**Academic Timetabling**: Asignar cada *evento* en un momento dado (*tiempo*) del *espacio*, vinculando las *personas* correspondientes, de modo que se cumplan todas las *restricciones duras* y se optimice la *función objetivo*, para así producir un *horario* de alta calidad.
+**Características Específicas del Problema**:
+- Los profesores y aulas tienen disponibilidad limitada en ciertos períodos.
+- Las clases poseen un número finito de clases pero para simplicidad del modelo y sus restricciones se va a decir que todas las clases que tiene un curso serán impartidas en el período, aula y profesor asignado
 
-**Componentes Clave**:
-- *Eventos*: Las actividades o reuniones que necesitan ser programadas. Son la unidad básica del horario. 
-- *Recursos*: Los elementos necesarios para que un evento puede llevarse a cabo. Se dividen en tres subgrupos:
-	- *Tiempo*: Los períodos discretos disponibles para programar eventos.
-	- *Espacio*: Las locaciones físicas con capacidad y características específicas
-	- *Personas*: Los participantes involucrados en los eventos, como alumnos y profesores.
+**Restricciones Duras**: Restricciones que deben cumplirse para que una planificación sea válida:
+- *Asignación Completa de Cursos*: Todos los cursos deben ser asignados a un período y un aula
+- *No Superposición por Profesor*: Un profesor no puede impartir múltiples clases al mismo tiempo
+- *No Superposición por Curriculum*: Dos cursos pertenecientes al mismo curriculum no pueden tener clases programadas simultáneamente
+- *Unicidad de Aula por Período*: Cada aula puede albergar como máximo una clase por período
+- *Capacidad del Profesor sobre un Curso*: Cada profesor está calificado para impartir un conjunto de cursos y la clase a la cual este asignado debe pertenecer a ese conjunto
+- *Respecto de Disponibilidad*: Los profesores y las aulas tienen disponibilidad limitada
+- *Capacidad de Aula*: El aula asignada tiene que tener capacidad para todos los estudiantes que van a recibir el curso
 
-**Restricciones**: Este tipo de problema de planificación de horarios de cursos están sujetos a muchas restricciones que generalmente se dividen en dos categorías: "duras" y "blandas". Las restricciones duras se aplican de manera rígida. Ejemplos:
-- Ningún recurso (estudiante/profesor) puede estar asignado a más de un lugar al mismo tiempo. 
-- Para cada período de tiempo, deben haber suficientes recursos (por ejemplos, aulas, supervisores, etc.) disponibles para todos los eventos programados en ese período
+**Observaciones**:
+- Un aula puede ser utilizada para dar clases a dos o más grupos que compartan un curso, pero está aula tiene que tener la capacidad 
 
-Las restricciones blandas son aquellas que son deseables pero no absolutamente esenciales. En la práctica es imposible satisfacer todas las restricciones blandas. Ejemplos:
+**Restricciones Blandas**: Restricciones que no son necesarias su validación para que una asignación sea válida, pero se busca minimizar el número de restricciones violadas:
+- *Preferencias de Turno*: Asignar ciertos tipos de cursos a turnos preferentes 
+- *Minimizar GAP por Curriculum*: Minimizar períodos vacíos entre clases del mismo curriculum
 
-- *Asignación de tiempo*: Puede ser necesario programar un curso en un período de tiempo específico. 
-- *Restricciones de tiempo entre eventos*: Un curso puede necesitar ser programado antes o después de otro
-- *Distribución de eventos en el tiempo*: Los estudiantes no deberían tener clases de un mismo curso en períodos consecutivos o en el mismo día
-- *Coherencia*: Los profesores pueden preferir tener todas sus clases concentradas en ciertos días y tener días libres en docencia. Estas restricciones entran en conflicto con las restricciones de distribuir los eventos en el tiempo
-- *Asignación de recursos*: Los profesores pueden preferir enseñar en un aula en particular, o puede ser que un examen específico deba programarse en cierta sala
-- *Continuidad*: Cualquier restricción cuyo propósito principal sea garantizar que ciertas características de los horarios de los estudiantes sean constantes o predecibles. Por ejemplo: las clases de un mismo curso deberían programarse en el mismo aula o a la misma hora del día
-
-Además, la planificación habitual de horarios de cursos involucra a muchos departamentos diferentes, donde cada departamento ofrece una multitud de cursos entre los cuales los estudiantes deben tomar algunos obligatoriamente y luego pueden elegir otros. En la mayoría de los casos, cada departamento es responsable de su propio horario y debe intentar tener en cuenta los horarios de los otros departamentos.
-
-**Función Objetivo**: Función matemática que mide la calidad del horario. Puede definirse como maximizar las preferencias o minimizar el número de períodos. 
-
-**Resultado Final**: Asignación completa donde cada evento tiene asignado un tiempo, un espacio y los recursos de personas necesarios, cumpliendo con todas las restricciones duras. 
-
-## Course Timetabling
-
-**Descripción**: Hay $q$ cursos $K_{1},K_{2},\dots,K_{q}$, y para cada curso $K_{i}$ consiste de $k_{i}$ clases. Hay $r$ grupos $S_{1},S_{2},\dots,S_{r}$, los cuales son grupos de cursos que tienen estudiantes en común. Esto significa que los cursos en $S_{i}$ deben ser programados todos en diferentes horarios. El número de períodos es $p$, y $l_{k}$ es el número máximo de clases que pueden ser programadas en el período $k$ (es decir, el número de aulas disponibles en el período $k$). 
-
+**Futuras Restricciones Blandas a Considerar**:
+- *Adecuación de Capacidad para Cursos en Múltiples Curriculum*: Para cada curso que está presente en más de un curriculum, cuando se asigna un aula a una clase de dicho curso, se prefiere que la capacidad del aula sea suficiente para acomodar al número total estimado de estudiantes de todos los curriculums que incluyen este curso. Si el aula asignada tiene una capacidad menor a ese total, se incurre en una penalización que aumenta con el déficit de capacidad
+- *Agrupamiento por Tipo de Actividad*: Para un curriculum, se prefiere agrupar temporalmente las clases del mismo tipo (todas las clases teóricas juntas, todas las clases prácticas juntas) 
+- *Distribución Uniforme de las Clases*: Las clases de cada curso se distribuyen uniformemente en un número mínimo de días laborales
+# Evaluación de una Instancia del Problema
+**Evaluación de una Instancia del Problema**: El problema al ser un problema NP-Completo encontrar una instancia que sea factible es NP y puede la instancia encontrada ser evaluada, ya sea factible o no, a través de una *función objetivo*. Esta función objetivo determina la calidad de una solución. En caso de que el problema tenga más de una instancia factible entonces, dependiendo de lo que se desee, una instancia es mejor que otra utilizando como medición la función objetivo. 
+- *Factibilidad*: Una solución es considerable factible cuando satisface todas las restricciones duras enumeradas anteriormente
+- *Calidad*: La calidad de una solución factible se mide mediante una función de costo ponderada que cuantifica el grado de violación de las restricciones blandas, donde cada restricción blanda tiene un peso asignado según su importancia relativa (los valores de los pesos puede ajustarse según las prioridades del instituto). Se busca minimizar esta función de costo ponderada. 
 ___
+**UCTP como Problema de Decisión**: Se busca conocer si una instancia cualquiera del problema es factible. Esto significa que satisface las restricciones presentadas. Este problema es NP-Completo porque es reducible a través del Problema de Coloración de Grafos y existe un certificado para una instancia que confirma en tiempo polinomial si es solución factible
 
+**UCTP como Problema de Optimización**: Se busca optimizar el problema de maximizar las asignaciones según una función de preferencias que mapea una asignación de: curso, período, aula, profesor con un valor real positivo. Este problema es NP-Duro porque es reducible a través del Problema de Coloración de Grafos (UCTP clásico). Mientras que la definición del problema con la función objetivo presentada sigue siendo NP-Duro pero es más fácil demostrar la clase de complejidad a través de una reducción al Maximum Weight Independent Set Problem.
+# Modelo Matemático
+**Conjuntos**:
+- $C:$ Conjunto de cursos
+- $Q:$ Conjunto de curriculums. Cada curriculum $q \in Q$ es un subconjunto de cursos: $C_{q} \subseteq C$
+- $P:$ Conjunto de períodos de tiempo
+- $R:$ Conjunto de aulas
+- $T:$ Conjunto de profesores
+- $F:$ Conjunto de preferencias. Cada preferencia $f \in F$ es una tupla ($c_{f}, p_{f}, r_{f}, t_{f}$) 
+---
 **Parámetros**:
-
-- $q:$ número de cursos
-- $K_{i}:$ curso $i$-ésimo, para $i = 1,\dots,q$
-- $k_{i}:$ número de clases (lecturas) que debe tener el curso $K_{i}$
-- $r:$ número de grupos
-- $S_{l}:$ conjunto de cursos en el grupo $l$-ésimo, para $l=1,\dots,r$. Los cursos en $S_{l}$ comparten estudiantes, por lo que sus clases no pueden solaparse
-- $p:$ número de períodos de tiempo disponibles
-- $l_{k}:$ número máximo de clases que pueden programarse en el período $k$ (es decir, el número de aulas disponibles en el período $k$), para $k = 1,\dots,p$
-- $p_{ik}:$ indicador de preasignación. $p_{ik} = 1$ si una clase del curso $K_{i}$ debe programarse obligatoriamente en el período $k$, y $p_{ik} = 0$ si no hay preasignación
-- $a_{ik}:$ indicador de disponibilidad. $a_{ik} = 1$ si una clase del curso $K_{i}$ puede programarse en el período $k$, y $a_{ik}=0$ si no está disponible (restricción de indisponibilidad)
-
-**Variables de Decisión**: $y_{ik} \in \{0,1\}$ para $i = 1, \dots, q$ y $k = 1, \dots, p$: 
-
-$$y_{ik} = \bigg\{ 
-\begin{array}{l} 
-1 & \text{si una clase del curso $K_i$ se programa en el período $k$} \\ 
-0 & \text{en caso contrario} 
-\end{array}$$
-
+- $\text{estudiantes}(c):$ número de estudiantes del curso $c \in C$
+- $\text{capacidad}(r):$ capacidad (número de estudiantes) del aula $r \in R$
+- $C_{t} \subseteq C:$ conjunto de cursos para los que el profesor $t \in T$ está calificado 
+- $\text{disposición}(t,p) \in \{ 0,1 \}:$ $1$ si el profesor $t$ está disponible en el período $p$, $0$ en caso contrario
+- $\text{disposición}(r,p) \in \{ 0,1 \}:$ $1$ si el aula $r$ está disponible en el período $p$, $0$ en caso contrario
+---
+**Variables de Decisión**: 
+- $x_{c,p,r,t} \in \{ 0,1 \}$ para todo $c \in C, p \in P, r \in R, t \in T$ tal que $c \in C(t)$ y $\text{capacidad}(r) \geq \text{estudiantes}(c)$
+- $x_{c,p,r,t} = 1$ si el curso $c$ se asigna al período $p$, aula $r$ y profesor $t$; $0$ en caso contrario.
+---
+**Restricciones Duras**: 
+- *Asignación completa de cada curso*:
+$$\sum_{p \in P} \sum_{r \in R} \sum_{t \in T} x_{c,p,r,t} = 1 : \forall c \in C $$
+- *No superposición por profesor*:
+$$\sum_{c \in C_t} \sum_{r \in R} x_{c,p,r,t} \leq 1 : \forall t \in T, \forall p \in P$$
+- *No superposición por curriculum*:
+$$\sum_{ c\in C_q } \sum_{r \in R} \sum_{t \in T} x_{c,p,r,t} \leq 1 : \forall q \in Q, \forall p \in P$$
+- *Unicidad de aula por período*:
+$$\sum_{c \in C} \sum_{t \in T} x_{c,p,r,t} \leq 1 : \forall r \in R, \forall p \in P$$
+- *Respeto de disponibilidad de profesores*:
+$$x_{c,p,r,t} \leq \text{disposición}(t,p) : \forall c \in C, p \in P, r \in R, t \in T \text{ con } c \in C_t$$
+- *Respeto de disponibilidad de aulas*:
+$$x_{c,p,r,t} \leq \text{disposición}(r,p) : \forall c \in C, p \in P, r \in R, t \in T \text{ con } c \in C_t$$
 ___
-
-**Propuestas de Funciones Objetivo**: 
-
-*Minimizar el Número Total de Períodos utilizados*: Reduce a un Problema de Coloración de Grafos (asignar "colores" períodos a cursos en conflicto). 
-
-$$\min \sum_{k=1}^p z_{k}$$
-
-donde $z_{i} = 1$ si el período $i$ tiene al menos una clase programada, y 0 en otro caso. 
-
-*Maximizar el Número de Clases en Períodos "preferidos"*: Generaliza el problema de asignación con restricciones de conflictos, que es NP-Hard. Se definen variables $c_{ik} \in \mathbb{R}^+$ que es el peso que indica la preferencia de programar una clase de $K_{i}$ en el período $k$. 
-
-$$\max \sum_{i=1}^q \sum_{k=1}^p c_{ik}y_{ik}$$
-
-Incluso $c_{ik} \in \{ 0,1 \}$, maximizar las asignaciones "preferidas" es computacionalmente difícil. 
-
+**Función Objetivo**: Maximizar el número de preferencias cumplidas:
+$$\max \sum_{f \in F} x_{ c_f, p_f, r_f, t_f }$$
+---
+**Observaciones**:
+- Las restricciones de *capacidad del aula y calificación del profesor* se incorporan implícitamente al definir las variables $x_{c,p,r,t}$ solo para combinaciones factibles ($\text{capacidad}(r) \geq \text{estudiantes}(c)$ y $c \in C_{t}$)
+- El modelo busca una solución factible (que cumpla todas las restricciones duras) y, entre ellas, maximiza el número de preferencias asignadas según la institución
+# Transformación: Grafo de Conflicto
+Un Grafo de Conflicto representa las incompatibilidades entre asignaciones posibles. Cada vértice corresponde a una asignación factible individual, y las aristas indican conflictos que impiden que dos asignaciones coexistan en una solución válida. 
+## Pasos de Transformación
+**Paso 1**: **Definición de Vértices**
+- Cada vértice representa una asignación factible individual de un curso a un período, aula y profesor
+- *Expresión*: Para cada combinación $(c,p,r,t)$ que cumple lo siguiente, se crea $v = (c,p,r,t)$:
+	- $c \in C$ (curso)
+	- $p \in P$ (período)
+	- $r \in R$ con $\text{capacidad}(r) \geq \text{estudiantes}(c)$
+	- $t \in T$ con $c \in C_t$ (profesor calificado)
+	- $\text{disposición}(t, p) = 1$ (profesor disponible)
+	- $\text{disposición}(r, p) = 1$ (aula disponible)
+- *Observación*: Este vértice $v$ corresponde a las variables $x_{c,p,r,t}$ con dominio restringido a combinaciones válidas. 
 ___
-
-**Restricciones**:
-
-- *Restricción de Número de Clases por Curso*: Cada curso debe tener exactamente el número de clases requerido. 
-
-$$\sum_{k=1}^p y_{ik} = k_{i} \ , \ \forall i = 1, \dots, q$$
-
-- *Restricción de Capacidad de Aulas por Período*: En cada período, el número de clases programadas no puede exceder el número de aulas disponibles.
-
-$$\sum_{i=1}^q y_{ik} \leq l_{k} \ , \ \forall k = 1, \dots, p$$
-
-- *Restricción de Conflictos por Grupo*: En cada período, para cada grupo, no puede haber más de una clase programada entre los cursos que comparten estudiantes.
-
-$$\sum_{i \in S_{l}} y_{ik} \leq 1 \ , \ \forall k = 1,\dots,p \ , \ \forall l = 1,\dots,r$$
-
-- *Restricciones de Preasignación y Disponibilidad*: Las asignaciones deben respetar las preasignaciones y las disponibilidades
-
-$$p_{ik} \leq y_{ik} \leq a_{ik} \ , \ \forall i = 1,\dots,q \ , \ \forall k = 1, \dots, p$$
-
-> $p_{ik} = 1 \implies y_{ik} = 1$ (clase preasignada)
-
-> $a_{ik} = 0 \implies y_{ik} = 0$ (período no disponible)
-
-- *Restricción de Variables Binarias*: 
-
-$$y_{ik} \in \{ 0,1 \} \ , \ \forall i = 1, \dots, q \ , \ \forall k = 1, \dots, p$$
-
+**Paso 2**: **Definición de Aristas** (**Conflictos**) $\Rightarrow$ Si dos asignaciones comparten cualquier recurso (curso, profesor, aula) en el mismo período, o pertenecen al mismo curriculum en el mismo período, no pueden coexistir en una solución factible. Se crea una arista no dirigida entre dos vértices $v_1 = (c_1, p_1, r_1, t_1)$ y $v_2 = (c_2,p_2,r_2,t_2)$ si al menos una de las siguientes condiciones de conflicto se cumplen:
+- $c_1 = c_2:$ un curso no puede asignarse dos veces
+- $t_1 = t_2 \land p_1 = p_2:$ un profesor no puede dar dos puntos cursos simultáneamente 
+- $r_1 = r_2 \land p_1 = p_2:$ un aula no puede albergar dos cursos simultáneamente 
+- $p_1 = p_2 \land \exists q \in Q$ tal que $c_1 \in C_q$ y $c_2 \in C_q:$ cursos de un mismo curriculum no pueden superponerse temporalmente
 ___
+**Paso 3**: **Estructura del Grafo Resultante**. Grafo no dirigido $G = (V,E)$ donde $V$ es el conjunto de vértices (asignaciones individuales factibles) y $E$ es el conjunto de aristas (pares de asignaciones conflictivas)
+## Interpretación de la Solución en el Grafo
+Una solución factible del UCTP corresponde a un subconjunto $S \subseteq V$ que cumple:
+1. *Cobertura de Cursos*:  Para cada curso $c \in C$, existe exactamente un vértice en $S$ con curso $c$.
+2. *Independencia*: $S$ es un conjunto independiente en $G$ (ningún par de vértices en $S$ está conectado por una arista)
+## Evaluación de la Solución en el Grafo
+Una solución factible del UCTP utilizando el Grafo de Conflicto puede evaluarse con la función objetivo presentada en el modelo matemático. Esta función es usada para calcular el cumplimiento de preferencias y se quiere maximizar el valor de dicha función. En el grafo definido anterior, a cada vértice se le asigna un peso según el conjunto de preferencias $F$. 
 
-**Observaciones del Modelo Matemático**: 
+*Observación*: Cada preferencia $f \in F$ es una tupla $(c_f,p_f,r_f,t_f)$ 
+## Complejidad Temporal de la Transformación
+**Complejidad Polinomial**: Complejidad que puede expresarse como $O(n^k)$ donde $n$ es el tamaño de la entrada y $k$ es una constante (independiente de $n$). 
+___
+**Generación de Vértices**: Para cada combinación $(c,p,r,t)$: 
+- Número de combinaciones brutas: $|C| \cdot |P| \cdot |R| \cdot |T|$
+- Verificaciones por combinación (tiempo constante $O(1)$) 
 
-- Este modelo asume que todas las clases son iguales en duración y que cada clase ocupa un período completo
-- La restricción de conflictos por grupos asegura que no haya solapamientos para cursos con estudiantes en común. Alternativamente, se puede utilizar una matriz de conflictos $C_{q\times q}$, donde $c_{ij} = 1$ si los cursos $K_{i}$ y $K_{j}$ tienen estudiantes en común, y $c_{ij} = 0$ en caso contrario. En tal caso, esta restricción se reemplazaría por:
+**Complejidad de Generación de Vértices**: $O(|C| \cdot |P| \cdot |R| \cdot |T|)$ 
+___
+**Generación de Aristas**: Comparar todos los pares ($v_1,v_2$) con las 4 condiciones de conflicto en $O(1)$. Se tienen $n(n-1)/2$, donde $n$ es el número de vértices válidos. 
 
-$$y_{ik} + y_{jk} \leq 1 \ , \ \forall k = 1, \dots, p \ , \ \forall i,j | c_{ij} = 1$$
-
-- En la práctica, pueden añadirse otras restricciones, como preferencias de profesores o distribución uniforme de clases, que requerirían extensiones del modelo. 
+**Complejidad de Generación de Aristas**: $O(n^2)$
+___
+**Complejidad Total**: Complejidad de Generación de Vértices $+$ Complejidad de Generación de Aristas $\to$ $O(n^2)$ donde $n = |C| \cdot |P| \cdot |R| \cdot |T|$ tomando como peor caso: combinaciones totalmente factibles. 
